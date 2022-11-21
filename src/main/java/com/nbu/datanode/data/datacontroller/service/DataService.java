@@ -1,7 +1,7 @@
 package com.nbu.datanode.data.datacontroller.service;
 
 import java.util.HashMap;
-import java.util.Objects;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.springframework.stereotype.Service;
 
@@ -12,7 +12,9 @@ import com.nbu.datanode.data.datacontroller.rest.Results.SuccessWithPayload;
 @Service
 public class DataService {
 
-    HashMap<String, DataEntry> localDataSet = new HashMap<>();
+    ConcurrentHashMap<String, DataEntry> localDataSet = new ConcurrentHashMap<>();
+    ConcurrentHashMap<String, DataEntry> migrationDataSet = new ConcurrentHashMap<>();
+    private volatile boolean rehashingInProgress = false;
 
     public DataService() {}
 
@@ -23,6 +25,9 @@ public class DataService {
         if (localDataSet.containsKey(key)) {
             return new SuccessWithPayload<>(localDataSet.get(key));
         }
+        if (rehashingInProgress && migrationDataSet.containsKey(key)) {
+            return new SuccessWithPayload<>(migrationDataSet.get(key));
+        }
         return Results.KeyNotFound;
     }
 
@@ -31,11 +36,11 @@ public class DataService {
             return Results.InvalidKey;
         }
         DataEntry dataEntry = new DataEntry(data);
-        if (localDataSet.containsKey(key)) {
+            if (localDataSet.containsKey(key)) {
+                localDataSet.put(key, dataEntry);
+                return Results.Updated;
+            }
             localDataSet.put(key, dataEntry);
-            return Results.Updated;
-        }
-        localDataSet.put(key, dataEntry);
         return Results.Added;
     }
 
@@ -56,5 +61,17 @@ public class DataService {
 
     public int getTotalNumberOfKeys() {
         return localDataSet.size();
+    }
+
+    public ConcurrentHashMap<String, DataEntry> rehashData() {
+        rehashingInProgress = true;
+        migrationDataSet = new ConcurrentHashMap<>(localDataSet);
+        localDataSet.clear();
+        return migrationDataSet;
+    }
+
+    public void rehashFinished() {
+        rehashingInProgress = false;
+        migrationDataSet.clear();
     }
 }

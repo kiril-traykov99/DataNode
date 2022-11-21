@@ -1,7 +1,8 @@
 package com.nbu.datanode.data.datacontroller;
 
 import java.util.HashMap;
-import java.util.Objects;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -60,6 +61,18 @@ import com.nbu.datanode.data.datacontroller.service.DataService;
         if (result instanceof Failure failure) {
             return handleFailure(failure);
         }
+        return new ResponseEntity<>(null, HttpStatus.OK);
+    }
+
+    @RequestMapping(value = "/rehash", method = RequestMethod.GET)
+    public ResponseEntity<ConcurrentHashMap<String, DataEntry>> rehashData() {
+        ConcurrentHashMap<String, DataEntry> response = dataService.rehashData();
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @RequestMapping(value = "/rehash/end", method = RequestMethod.GET)
+    public ResponseEntity<DataEntry> rehashFinished() {
+        dataService.rehashFinished();
         return new ResponseEntity<>(null, HttpStatus.OK);
     }
 
