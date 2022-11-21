@@ -12,8 +12,8 @@ import com.nbu.datanode.data.datacontroller.rest.Results.SuccessWithPayload;
 @Service
 public class DataService {
 
-    ConcurrentHashMap<String, DataEntry> localDataSet = new ConcurrentHashMap<>();
-    ConcurrentHashMap<String, DataEntry> migrationDataSet = new ConcurrentHashMap<>();
+    ConcurrentHashMap<String, HashMap<String, Object>> localDataSet = new ConcurrentHashMap<>();
+    ConcurrentHashMap<String, HashMap<String, Object>> migrationDataSet = new ConcurrentHashMap<>();
     private volatile boolean rehashingInProgress = false;
 
     public DataService() {}
@@ -35,12 +35,8 @@ public class DataService {
         if (!validateKey(key)) {
             return Results.InvalidKey;
         }
-        DataEntry dataEntry = new DataEntry(data);
-            if (localDataSet.containsKey(key)) {
-                localDataSet.put(key, dataEntry);
-                return Results.Updated;
-            }
-            localDataSet.put(key, dataEntry);
+
+            localDataSet.put(key, data);
         return Results.Added;
     }
 
@@ -63,7 +59,7 @@ public class DataService {
         return localDataSet.size();
     }
 
-    public ConcurrentHashMap<String, DataEntry> rehashData() {
+    public ConcurrentHashMap<String, HashMap<String, Object>> rehashData() {
         rehashingInProgress = true;
         migrationDataSet = new ConcurrentHashMap<>(localDataSet);
         localDataSet.clear();

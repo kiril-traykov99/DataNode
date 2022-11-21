@@ -12,6 +12,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nbu.datanode.data.datacontroller.rest.Results;
 import com.nbu.datanode.data.datacontroller.rest.Results.Failure;
 import com.nbu.datanode.data.datacontroller.rest.Results.Result;
@@ -31,19 +33,19 @@ import com.nbu.datanode.data.datacontroller.service.DataService;
     }
 
     @RequestMapping(value = "/data/{key}", method = RequestMethod.GET)
-        public ResponseEntity<DataEntry> requestData(@PathVariable String key) {
+        public ResponseEntity<HashMap<String, Object>> requestData(@PathVariable String key) {
         Result result =  dataService.handleReadRequest(key);
         if (result instanceof Failure failure) {
             return handleFailure(failure);
         } else {
-            SuccessWithPayload<DataEntry> success = (SuccessWithPayload<DataEntry>) result;
-            DataEntry dataEntry = success.getPayload();
+            SuccessWithPayload<HashMap<String, Object>> success = (SuccessWithPayload<HashMap<String, Object>>) result;
+            HashMap<String, Object> dataEntry = success.getPayload();
             return new ResponseEntity<>(dataEntry, HttpStatus.OK);
         }
     }
 
     @RequestMapping(value = "/data/{key}", method = RequestMethod.POST)
-    public ResponseEntity<DataEntry> persistData(@PathVariable String key, @RequestBody HashMap<String, Object> data) {
+    public ResponseEntity<HashMap<String, Object>> persistData(@PathVariable String key, @RequestBody HashMap<String, Object> data) {
         Result result = dataService.handleWriteRequest(key, data);
         if (result instanceof Success success) {
             if (Results.Updated.equals(success)) {
@@ -56,7 +58,7 @@ import com.nbu.datanode.data.datacontroller.service.DataService;
     }
 
     @RequestMapping(value = "/data/{key}", method = RequestMethod.DELETE)
-    public ResponseEntity<DataEntry> deleteData(@PathVariable String key) {
+    public ResponseEntity<HashMap<String, Object>> deleteData(@PathVariable String key) {
         Result result = dataService.handleDeleteRequest(key);
         if (result instanceof Failure failure) {
             return handleFailure(failure);
@@ -65,18 +67,24 @@ import com.nbu.datanode.data.datacontroller.service.DataService;
     }
 
     @RequestMapping(value = "/rehash", method = RequestMethod.GET)
-    public ResponseEntity<ConcurrentHashMap<String, DataEntry>> rehashData() {
-        ConcurrentHashMap<String, DataEntry> response = dataService.rehashData();
-        return new ResponseEntity<>(response, HttpStatus.OK);
+    public ResponseEntity<String> rehashData() {
+        ConcurrentHashMap<String, HashMap<String, Object>> response = dataService.rehashData();
+
+        try {
+            return new ResponseEntity<>(new ObjectMapper().writeValueAsString(response), HttpStatus.OK);
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     @RequestMapping(value = "/rehash/end", method = RequestMethod.GET)
     public ResponseEntity<DataEntry> rehashFinished() {
         dataService.rehashFinished();
+        System.out.println("rehash ended");
         return new ResponseEntity<>(null, HttpStatus.OK);
     }
 
-    private ResponseEntity<DataEntry> handleFailure(Failure failure) {
+    private ResponseEntity<HashMap<String, Object>> handleFailure(Failure failure) {
         if (Results.KeyAlreadyPresent.equals(failure)) {
             return new ResponseEntity<>(null, HttpStatus.CONFLICT);
         } else if (Results.KeyNotFound.equals(failure)) {
