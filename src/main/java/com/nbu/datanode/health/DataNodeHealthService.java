@@ -7,8 +7,7 @@ import com.nbu.datanode.data.datacontroller.service.DataService;
 @Service
 public class DataNodeHealthService {
 
-    final
-    DataService dataService;
+    final DataService dataService;
 
     public DataNodeHealthService(DataService dataService) {
         this.dataService = dataService;

@@ -25,7 +25,6 @@ public final class Results {
     public static final Failure KeyNotFound = new KeyNotFound();
     public static final Failure KeyAlreadyPresent = new KeyAlreadyPresent();
     public static final Failure InvalidKey = new InvalidKey();
-    public static final Failure SERVICE_ERROR = new ServiceError();
 
     public static final Success Deleted = new Deleted();
     public static final Success Added = new Added();
